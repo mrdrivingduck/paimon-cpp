@@ -1008,6 +1008,14 @@ macro(build_glog)
                                      INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
 
     add_dependencies(glog glog_ep)
+
+    find_library(LIBUNWIND_LIBRARY NAMES unwind)
+    if(LIBUNWIND_LIBRARY)
+        message(STATUS "Linking glog with libunwind")
+        set_property(TARGET glog
+                     APPEND
+                     PROPERTY INTERFACE_LINK_LIBRARIES unwind)
+    endif()
 endmacro()
 
 build_fmt()
