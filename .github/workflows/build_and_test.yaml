@@ -53,7 +53,7 @@ jobs:
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.runner || 'ubuntu-24.04' }}
-    timeout-minutes: 120
+    timeout-minutes: ${{ matrix.timeout_minutes || 120 }}
     strategy:
       fail-fast: false
       matrix:
@@ -96,6 +96,10 @@ jobs:
           - name: tsan-aarch64
             runner: ubuntu-24.04-arm
             build_args: --enable_tsan
+          - name: macos-release-aarch64
+            runner: macos-15
+            build_args: --build_type Release
+            timeout_minutes: 180
     steps:
       - name: Checkout paimon-cpp
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -110,9 +114,16 @@ jobs:
         shell: bash
         run: ci/scripts/setup_rust.sh
       - name: Install HTTP and TLS development dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+      - name: Install TLS development dependencies on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install openssl@3
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix openssl@3)" >> "${GITHUB_ENV}"
       - name: Build Paimon
         shell: bash
         env:

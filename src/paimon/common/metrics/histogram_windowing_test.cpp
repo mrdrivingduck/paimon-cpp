@@ -27,11 +27,11 @@
 namespace paimon::test {
 
 TEST(HistogramWindowingImplTest, TestAdvanceAndAggregateAcrossWindows) {
-    // Use a relatively large span to avoid flakiness around boundary (aligned_now - start == span).
-    HistogramWindowingImpl h(/*num_windows=*/4, /*micros_per_window=*/25000,
+    // Keep enough headroom for a loaded CI runner between sampling windows.
+    HistogramWindowingImpl h(/*num_windows=*/4, /*micros_per_window=*/1000ULL * 1000ULL,
                              /*min_num_per_window=*/1);
     h.Add(1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(26));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     h.Add(2);
 
     HistogramStats s = h.GetStats();
@@ -97,8 +97,8 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     // Validate min_num_per_window behavior:
     // - window advancement is gated by sample count
     // - if the histogram doesn't advance in time, it may get reset once beyond max span
-    // Use a larger window to reduce wall-clock sensitivity and avoid flakiness.
-    HistogramWindowingImpl h(/*num_windows=*/3, /*micros_per_window=*/50000,
+    // Keep enough headroom for a loaded CI runner between sampling windows.
+    HistogramWindowingImpl h(/*num_windows=*/3, /*micros_per_window=*/1000ULL * 1000ULL,
                              /*min_num_per_window=*/100);
 
     // Fill current window but keep it below min_num.
@@ -107,7 +107,7 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     }
 
     // Cross at least one window.
-    std::this_thread::sleep_for(std::chrono::milliseconds(75));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
     h.Add(2);  // 100th sample; advancement check happens before this add.
 
     HistogramStats s1 = h.GetStats();
@@ -116,8 +116,8 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     EXPECT_DOUBLE_EQ(s1.max, 2);
 
     // Cross enough time so that aligned_now - current_window_start >= max_span
-    // (max_span = num_windows * micros_per_window = 150ms here).
-    std::this_thread::sleep_for(std::chrono::milliseconds(175));
+    // (max_span = num_windows * micros_per_window = 3000ms here).
+    std::this_thread::sleep_for(std::chrono::milliseconds(3500));
     h.Add(1000);
 
     HistogramStats s2 = h.GetStats();

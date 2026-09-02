@@ -106,10 +106,18 @@ void MockRestServer::Stop() {
     if (stopped_.exchange(true)) {
         return;
     }
-    // `shutdown` wakes the blocked `accept`; the fd is closed only after the accept
-    // thread has joined, so it cannot be recycled by another thread while the accept
-    // thread might still use it.
-    ::shutdown(listen_fd_, SHUT_RDWR);
+    // Connecting to the listener wakes a blocked `accept`. On macOS, closing or
+    // shutting down a listening socket from another thread does not do so reliably.
+    int32_t wake_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (wake_fd >= 0) {
+        struct sockaddr_in address;
+        std::memset(&address, 0, sizeof(address));
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        address.sin_port = htons(static_cast<uint16_t>(port_));
+        ::connect(wake_fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address));
+        ::close(wake_fd);
+    }
     if (accept_thread_.joinable()) {
         accept_thread_.join();
     }
@@ -128,6 +136,10 @@ void MockRestServer::AcceptLoop() {
                 return;
             }
             continue;
+        }
+        if (stopped_.load()) {
+            ::close(connection_fd);
+            return;
         }
         // The connection is handled on the accept thread; the socket timeouts keep a
         // wedged peer from blocking `Stop()` indefinitely.

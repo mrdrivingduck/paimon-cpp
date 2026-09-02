@@ -129,6 +129,8 @@ pushd "${build_dir}"
 
 ENABLE_LUMINA="ON"
 ENABLE_TANTIVY="ON"
+ENABLE_LUCENE="ON"
+ENABLE_JINDO="ON"
 if [[ "${CC:-}" == *"gcc-8"* ]] || [[ "${CXX:-}" == *"g++-8"* ]]; then
     ENABLE_LUMINA="OFF"
     ENABLE_TANTIVY="OFF" # tantivy-fts (Rust FFI) is not built on the gcc-8 image.
@@ -136,11 +138,20 @@ fi
 if [[ "${enable_tsan}" == "true" ]]; then
     ENABLE_TANTIVY="OFF" # Tantivy's Rust library is not TSAN-instrumented.
 fi
-# CI always builds natively, so the host architecture is the target architecture.
+# CI always builds natively, so the host platform is the target platform.
+host_os=$(uname -s)
 host_arch=$(uname -m)
-if [[ "${host_arch}" != "x86_64" ]]; then
+if [[ "${host_os}" != "Linux" || "${host_arch}" != "x86_64" ]]; then
     ENABLE_LUMINA="OFF"
-    echo "=== Lumina disabled: no prebuilt artifacts for ${host_arch} ==="
+    echo "=== Lumina disabled: no prebuilt artifacts for ${host_os}-${host_arch} ==="
+fi
+if [[ "${host_os}" == "Darwin" ]]; then
+    ENABLE_LUCENE="OFF"
+    ENABLE_TANTIVY="OFF"
+    ENABLE_JINDO="OFF"
+    echo "=== Lucene disabled: bundled LucenePlusPlus does not support AppleClang ==="
+    echo "=== Tantivy disabled: its test link flags are not supported by macOS ld ==="
+    echo "=== Jindo disabled: its SDK dylib is not available to macOS test executables ==="
 fi
 
 CMAKE_ARGS=(
@@ -148,15 +159,21 @@ CMAKE_ARGS=(
     "-DCMAKE_BUILD_TYPE=${build_type}"
     "-DPAIMON_BUILD_TESTS=ON"
     "-DPAIMON_ENABLE_MOSAIC=ON"
-    "-DPAIMON_ENABLE_JINDO=ON"
+    "-DPAIMON_ENABLE_JINDO=${ENABLE_JINDO}"
     "-DPAIMON_ENABLE_OSS=ON"
     "-DPAIMON_ENABLE_S3=ON"
     "-DPAIMON_ENABLE_LUMINA=${ENABLE_LUMINA}"
-    "-DPAIMON_ENABLE_LUCENE=ON"
+    "-DPAIMON_ENABLE_LUCENE=${ENABLE_LUCENE}"
     "-DPAIMON_ENABLE_TANTIVY=${ENABLE_TANTIVY}"
     "-DPAIMON_ENABLE_REST=ON"
     "-DPAIMON_LINT_GIT_TARGET_COMMIT=${lint_git_target_commit}"
 )
+
+if [[ "${host_os}" == "Darwin" ]]; then
+    # Homebrew installs fmt as a ccache dependency, but its include directory is not
+    # propagated to every object library. Use the bundled fmt consistently instead.
+    CMAKE_ARGS+=("-Dfmt_SOURCE=BUNDLED")
+fi
 
 if [[ "${enable_asan}" == "true" ]]; then
     CMAKE_ARGS+=("-DPAIMON_USE_ASAN=ON")

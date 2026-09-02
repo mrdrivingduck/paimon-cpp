@@ -140,7 +140,10 @@ std::unique_ptr<UniqueTestDirectory> UniqueTestDirectory::Create(const std::stri
     static const size_t kMaxTries = 1000;
     std::string tmp_dir = fs_identifier == "jindo"
                               ? GetJindoTestDir()
-                              : std::filesystem::temp_directory_path().string() + "/";
+                              : std::filesystem::temp_directory_path().string();
+    if (tmp_dir.back() != '/') {
+        tmp_dir += '/';
+    }
     std::map<std::string, std::string> fs_options =
         fs_identifier == "jindo" ? GetJindoTestOptions() : std::map<std::string, std::string>();
     auto fs = FileSystemFactory::Get(fs_identifier, tmp_dir, fs_options);

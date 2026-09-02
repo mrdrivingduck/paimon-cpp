@@ -178,11 +178,11 @@ TEST_F(LiteralConverterTest, TestDoubleLiteral) {
     CheckLiteralsFromString(FieldType::DOUBLE, {"4.05", "5.17"},
                             std::vector<Literal>({Literal(4.05), Literal(5.17)}));
     CheckLiteralFromRow(arrow::float64(),
-                        {4.05, 5.17, static_cast<double> INFINITY, static_cast<double>(-INFINITY),
-                         static_cast<double> NAN, NullType()},
+                        {4.05, 5.17, static_cast<double>(INFINITY), static_cast<double>(-INFINITY),
+                         static_cast<double>(NAN), NullType()},
                         FieldType::DOUBLE,
-                        {Literal(4.05), Literal(5.17), Literal(static_cast<double> INFINITY),
-                         Literal(static_cast<double>(-INFINITY)), Literal(static_cast<double> NAN),
+                        {Literal(4.05), Literal(5.17), Literal(static_cast<double>(INFINITY)),
+                         Literal(static_cast<double>(-INFINITY)), Literal(static_cast<double>(NAN)),
                          Literal(FieldType::DOUBLE)});
 }
 

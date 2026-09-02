@@ -441,10 +441,16 @@ if(PAIMON_BUILD_TESTS)
         paimon_global_index_static
         paimon_local_file_system_static
         paimon_mock_file_format_static)
-    paimon_link_libraries_no_as_needed(
-        TEST_PLUGIN_LINK_LIBS paimon_parquet_file_format_shared
-        paimon_blob_file_format_shared)
-    set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS} ${TEST_PLUGIN_LINK_LIBS})
+    set(TEST_STATIC_LINK_LIBS ${TEST_WHOLE_ARCHIVE_LINK_LIBS})
+    if(APPLE)
+        list(APPEND TEST_STATIC_LINK_LIBS ${PAIMON_PARQUET_FILE_FORMAT_STATIC_LINK_LIBS}
+             ${PAIMON_BLOB_FILE_FORMAT_STATIC_LINK_LIBS})
+    else()
+        paimon_link_libraries_no_as_needed(
+            TEST_PLUGIN_LINK_LIBS paimon_parquet_file_format_shared
+            paimon_blob_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+    endif()
     paimon_link_libraries_whole_archive(PAIMON_LOCAL_FILE_SYSTEM_STATIC_LINK_LIBS
                                         paimon_local_file_system_static)
     paimon_link_libraries_no_as_needed(PAIMON_LOCAL_FILE_SYSTEM_SHARED_LINK_LIBS
@@ -455,22 +461,35 @@ if(PAIMON_BUILD_TESTS)
                                         paimon_parquet_file_format_static)
 
     if(PAIMON_ENABLE_MOSAIC)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_mosaic_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        if(APPLE)
+            list(APPEND TEST_STATIC_LINK_LIBS
+                 ${PAIMON_MOSAIC_FILE_FORMAT_STATIC_LINK_LIBS})
+        else()
+            paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                               paimon_mosaic_file_format_shared)
+            list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        endif()
         paimon_link_libraries_whole_archive(PAIMON_MOSAIC_FILE_FORMAT_STATIC_LINK_LIBS
                                             paimon_mosaic_file_format_static)
     endif()
 
     if(PAIMON_ENABLE_ORC)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_orc_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        if(APPLE)
+            list(APPEND TEST_STATIC_LINK_LIBS ${PAIMON_ORC_FILE_FORMAT_STATIC_LINK_LIBS})
+        else()
+            paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                               paimon_orc_file_format_shared)
+            list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        endif()
     endif()
     if(PAIMON_ENABLE_AVRO)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_avro_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        if(APPLE)
+            list(APPEND TEST_STATIC_LINK_LIBS ${PAIMON_AVRO_FILE_FORMAT_STATIC_LINK_LIBS})
+        else()
+            paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                               paimon_avro_file_format_shared)
+            list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        endif()
     endif()
     if(PAIMON_ENABLE_JINDO)
         paimon_link_libraries_whole_archive(PAIMON_JINDO_FILE_SYSTEM_STATIC_LINK_LIBS
@@ -482,16 +501,24 @@ if(PAIMON_BUILD_TESTS)
     if(PAIMON_ENABLE_OSS)
         paimon_link_libraries_whole_archive(PAIMON_OSS_FILE_SYSTEM_STATIC_LINK_LIBS
                                             paimon_oss_file_system_static)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_oss_file_system_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        if(APPLE)
+            list(APPEND TEST_STATIC_LINK_LIBS ${PAIMON_OSS_FILE_SYSTEM_STATIC_LINK_LIBS})
+        else()
+            paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                               paimon_oss_file_system_shared)
+            list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        endif()
     endif()
     if(PAIMON_ENABLE_S3)
         paimon_link_libraries_whole_archive(PAIMON_S3_FILE_SYSTEM_STATIC_LINK_LIBS
                                             paimon_s3_file_system_static)
-        paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
-                                           paimon_s3_file_system_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        if(APPLE)
+            list(APPEND TEST_STATIC_LINK_LIBS ${PAIMON_S3_FILE_SYSTEM_STATIC_LINK_LIBS})
+        else()
+            paimon_link_libraries_no_as_needed(TEST_PLUGIN_LINK_LIBS
+                                               paimon_s3_file_system_shared)
+            list(APPEND TEST_STATIC_LINK_LIBS ${TEST_PLUGIN_LINK_LIBS})
+        endif()
     endif()
     if(PAIMON_ENABLE_LUMINA)
         paimon_link_libraries_whole_archive(PAIMON_LUMINA_INDEX_STATIC_LINK_LIBS
@@ -576,3 +603,8 @@ endif()
 install(EXPORT PaimonTargets
         NAMESPACE Paimon::
         DESTINATION ${PAIMON_CMAKE_INSTALL_DIR})
+install(DIRECTORY ${ARROW_INCLUDE_DIR}/
+        DESTINATION "include"
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "*.hpp")

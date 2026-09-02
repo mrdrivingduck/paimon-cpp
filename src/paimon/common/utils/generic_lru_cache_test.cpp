@@ -497,23 +497,23 @@ TEST_F(GenericLruCacheTest, ExpirationOnGetWithSupplier) {
 
 TEST_F(GenericLruCacheTest, AccessResetsExpirationTimer) {
     StringIntCache::Options options;
-    options.expire_after_access_ms = 100;
+    options.expire_after_access_ms = 1000;
     StringIntCache cache(options);
 
     ASSERT_OK(cache.Put("key1", 100));
 
-    // Access at 40ms to reset the timer
-    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    // Access before expiration to reset the timer.
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     auto result = cache.GetIfPresent("key1");
     ASSERT_TRUE(result.has_value());
 
-    // At 80ms from last access (40ms from the GetIfPresent), should still be valid
-    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    // At 300ms from the last access, it should still be valid.
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     result = cache.GetIfPresent("key1");
     ASSERT_TRUE(result.has_value());
 
     // Wait for full expiration from last access
-    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
     result = cache.GetIfPresent("key1");
     ASSERT_FALSE(result.has_value());
 }

@@ -46,6 +46,12 @@ class PAIMON_EXPORT Literal {
     template <typename T>
     explicit Literal(const T& val);
 
+#if defined(__APPLE__)
+    // On macOS, long and int64_t are distinct types.
+    explicit Literal(const long& val)  // NOLINT(runtime/int)
+        : Literal(static_cast<int64_t>(val)) {}
+#endif
+
     /// Creates a literal from binary data (string or binary type).
     /// The data is copied into the literal's internal storage.
     /// @param binary_type Must be either `STRING` or `BINARY` field type.

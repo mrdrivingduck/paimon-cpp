@@ -180,20 +180,27 @@ Result<int32_t> StringUtils::StringToDate(const std::string& str) {
     if (int_value) {
         return int_value.value();
     }
-    std::tm timeinfo = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, nullptr};
-    std::istringstream ss(str);
-    ss >> std::get_time(&timeinfo, "%Y-%m-%d");
-    if (ss.fail()) {
+    if (str.size() != 10 || str[4] != '-' || str[7] != '-' ||
+        !std::all_of(str.begin(), str.end(),
+                     [](unsigned char c) { return c == '-' || std::isdigit(c); })) {
         return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
-    int32_t orig_mon = timeinfo.tm_mon;
-    int32_t orig_mday = timeinfo.tm_mday;
-    std::time_t time = timegm(&timeinfo);
-    if (time == -1 || timeinfo.tm_mon != orig_mon || timeinfo.tm_mday != orig_mday) {
+    int32_t year = std::stoi(str.substr(0, 4));
+    int32_t month = std::stoi(str.substr(5, 2));
+    int32_t day = std::stoi(str.substr(8, 2));
+    static const int32_t days_per_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    bool leap_year = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    if (month < 1 || month > 12 || day < 1 ||
+        day > days_per_month[month - 1] + (month == 2 && leap_year)) {
         return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
-    static const int64_t SECONDS_PER_DAY = 86400l;  // = 24 * 60 * 60
-    return time / SECONDS_PER_DAY;
+    int64_t adjusted_year = year - (month <= 2);
+    int64_t era = (adjusted_year >= 0 ? adjusted_year : adjusted_year - 399) / 400;
+    auto year_of_era = static_cast<uint32_t>(adjusted_year - era * 400);
+    uint32_t day_of_year =
+        (153 * static_cast<uint32_t>(month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+    uint32_t day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    return static_cast<int32_t>(era * 146097 + day_of_era - 719468);
 }
 
 /// Parses a timestamp string into unix milliseconds.
